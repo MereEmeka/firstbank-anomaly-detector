@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  firstbank.api:
+    image: ${DOCKER_REGISTRY-}firstbankapi
+    build:
+      context: .
+      dockerfile: FirstBank.API/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Database=FirstBankDb;User Id=sa;Password=FBNSecurityPass2026;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - Jwt__Key=TE9mQnQ/Y0BAQmdoJy1YbXpzVXZadkdnY2I8NDQ4QDQ=
+      - Jwt__Issuer=FirstBank.Api
+      - Jwt__Audience=FirstBank.Clients 
+    depends_on:
+      - db
+      - seq
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=FBNSecurityPass2026
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+  seq:
+    image: datalust/seq:latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=SecretKey
+    ports:
+      - "5341:5341"
+      - "8081:80"
+
+volumes:
+  mssql_data:

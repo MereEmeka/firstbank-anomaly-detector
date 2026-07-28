@@ -1,0 +1,21 @@
+# Stage 1: Build Environment
+From mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR / src
+
+# Copy project files and restore dependencies
+COPY ["FirstBank.API/FirstBank.API.csproj", "FirstBank.API/"]
+COPY ["FirstBank.Core/FirstBank.Core.csproj", "FirstBank.Core/"]
+COPY ["FirstBank.DataAccess/FirstBank.DataAccess.csproj", "FirstBank.DataAccess/"]
+RUN dotnet restore "FirstBank.API/FirstBank.API.csproj" 
+
+# Copy the rest of the code and build
+COPY ..
+WORKDIR "/src/FirstBank.API"
+RUN dotnet build "FirstBank.API.csproj" -c Release -o /app/build 
+
+# Stage 2: Publish
+FROM build AS Publish
+RUN dotnet publish "FirstBank.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Stage 3: Runtime Environment (Security Focused)
+FROM mcr.microsoft.com/dotnet/aspnet

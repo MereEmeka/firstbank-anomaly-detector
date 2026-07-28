@@ -1,0 +1,36 @@
+﻿-- 1. Create the Accounts Table
+CREATE TABLE Accounts (
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    AccountNumber NVARCHAR(20) NOT NULL,
+    Balance DECIMAL(18, 2) NOT NULL,
+    Currency NVARCHAR(3) DEFAULT 'NGN',
+    CreatedAt DATETIME2 DEFAULT GETUTCDATE()
+);
+
+-- 2. Create the Transactions Table
+CREATE TABLE Transactions (
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    SourceAccountId UNIQUEIDENTIFIER NOT NULL,
+    DestinationAccountId UNIQUEIDENTIFIER NOT NULL,
+    Amount DECIMAL(18, 2) NOT NULL,
+    Description NVARCHAR(255),
+    IsAnomalyFlagged BIT NOT NULL,
+    CreatedAt DATETIME2 DEFAULT GETUTCDATE()
+);
+
+-- 3. Create the Anomaly Logs Table
+CREATE TABLE AnomalyLogs (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    TransactionId UNIQUEIDENTIFIER NOT NULL,
+    FlagReason NVARCHAR(MAX) NOT NULL,
+    LoggedAt DATETIME2 DEFAULT GETUTCDATE()
+);
+
+-- 4. Insert two dummy accounts so you have something to test with
+INSERT INTO Accounts (Id, AccountNumber, Balance, Currency)
+VALUES 
+    ('11111111-1111-1111-1111-111111111111', '1000000001', 5000000.00, 'NGN'),
+    ('22222222-2222-2222-2222-222222222222', '1000000002', 50000.00, 'NGN'),
+    ('33333333-3333-3333-3333-333333333333', '1000000003', 100000.00, 'NGN'),
+    ('44444444-4444-4444-4444-444444444444', '1000000004', 20000.00, 'NGN'),
+    ('55555555-5555-5555-5555-555555555555', '1000000005', 150000.00, 'NGN');

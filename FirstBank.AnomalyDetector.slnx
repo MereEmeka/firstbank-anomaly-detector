@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+  <Project Path="FirstBank.API/FirstBank.API.csproj" />
+  <Project Path="FirstBank.Core/FirstBank.Core.csproj" />
+  <Project Path="FirstBank.DataAccess/FirstBank.DataAccess.csproj" />
+</Solution>
