@@ -1,4 +1,7 @@
-﻿using FirstBank.Core.Models;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using FirstBank.Core.Models;
 using FirstBank.DataAccess.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -19,34 +22,47 @@ namespace FirstBank.API.Features
 
         public async Task<ApiResponse<object>> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Attempting to create account: {AccountNumber}", request.AccountNumber);
+            // 1. FETCH THE ACTUAL USER FROM THE DATABASE
+            // We use the ID from the JWT to look up their full profile
+            var currentUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == request.UserId, cancellationToken);
 
-            var exists = await _context.Accounts.AnyAsync(a => a.AccountNumber == request.AccountNumber, cancellationToken);
-            if (exists)
+            if (currentUser == null)
             {
-                _logger.LogWarning("Account Creation failed. The account number: {AccountNumber} already exists.", request.AccountNumber);
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Account Number already exists."
-                };
+                return new ApiResponse<object> { Success = false, StatusCode = 404, Message = "User profile not found." };
             }
 
+            // 2. GENERATE UNIQUE ACCOUNT NUMBER
+            var random = new Random();
+            string generatedAccountNumber;
+            bool isUnique;
+            do
+            {
+                generatedAccountNumber = random.Next(1000000000, 2000000000).ToString();
+                isUnique = !await _context.Accounts.AnyAsync(a => a.AccountNumber == generatedAccountNumber, cancellationToken);
+            }
+            while (!isUnique);
+
+            // 3. BUILD THE ACCOUNT ENTITY
             var account = new Account
             {
                 Id = Guid.NewGuid(),
-                AccountNumber = request.AccountNumber,
+                UserId = request.UserId,
+                AccountNumber = generatedAccountNumber,
                 Balance = request.InitialBalance,
                 Currency = request.Currency,
                 CreatedAt = DateTime.UtcNow
             };
 
+            // 4. SAVE TO DATABASE
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Successfully created Account: {AccountId} for Account Number: {AccountNumber} with Starting Balance: {Balance}",
-                account.Id, account.AccountNumber, account.Balance);
+            _logger.LogInformation("Successfully created Account: {AccountNumber} for {FirstName} {LastName}",
+                account.AccountNumber, currentUser.FirstName, currentUser.LastName);
 
+            // 5. RETURN A BRILLIANT SUCCESS ENVELOPE
+            // Notice how we include their actual name in the response data!
             return new ApiResponse<object>
             {
                 Success = true,
@@ -54,10 +70,11 @@ namespace FirstBank.API.Features
                 Message = "Account Created Successfully.",
                 Data = new
                 {
-                    account.Id,
-                    account.AccountNumber,
-                    account.Balance,
-                    account.Currency
+                    accountId = account.Id,
+                    accountOwner = $"{currentUser.FirstName} {currentUser.LastName}", 
+                    accountNumber = account.AccountNumber,
+                    balance = account.Balance,
+                    currency = account.Currency
                 }
             };
         }

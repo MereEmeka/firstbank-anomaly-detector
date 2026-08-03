@@ -38,6 +38,8 @@ namespace FirstBank.API.Controllers
             var user = new AppUser
             {
                 Email = request.Email,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
                 PasswordHash = hashedPassword,
                 Role = request.Role  // Default role is "Customer"
             };

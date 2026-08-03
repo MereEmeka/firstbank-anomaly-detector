@@ -4,6 +4,7 @@ using FirstBank.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FirstBank.DataAccess.Migrations
 {
     [DbContext(typeof(FirstDBContext))]
-    partial class FirstDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260730091732_AddAppUsersAndSeedAdmin")]
+    partial class AddAppUsersAndSeedAdmin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,23 +45,16 @@ namespace FirstBank.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("FirstBank.Core.Models.AnomalyLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("FlagReason")
                         .IsRequired()
@@ -86,14 +82,6 @@ namespace FirstBank.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -111,8 +99,6 @@ namespace FirstBank.DataAccess.Migrations
                         {
                             UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             Email = "admin@firstbank.com",
-                            FirstName = "System",
-                            LastName = "Administrator",
                             PasswordHash = "$2a$11$qJVo2QJYfU7wCijVxWbQSur31Z.IK02bPMaxULU51m5JshRZKaqjq",
                             Role = "Admin"
                         });
@@ -165,17 +151,6 @@ namespace FirstBank.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Transactions");
-                });
-
-            modelBuilder.Entity("FirstBank.Core.Models.Account", b =>
-                {
-                    b.HasOne("FirstBank.Core.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

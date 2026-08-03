@@ -33,6 +33,8 @@ namespace FirstBank.DataAccess.Data
                 new AppUser
                 {
                     UserId = adminId,
+                    FirstName = "System",
+                    LastName = "Administrator",
                     Email = "admin@firstbank.com",
                     PasswordHash = "$2a$11$qJVo2QJYfU7wCijVxWbQSur31Z.IK02bPMaxULU51m5JshRZKaqjq",
                     Role = "Admin"

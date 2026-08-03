@@ -1,9 +1,11 @@
-﻿namespace FirstBank.API.DTOs
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace FirstBank.API.DTOs
 {
     public class CreateAccountRequest
     {
-        public string AccountNumber { get; set; } = string.Empty;
-        public decimal InitialBalance { get; set; } 
+        [Range(0, double.MaxValue, ErrorMessage = "Initial balance cannot be negative.")]
+        public decimal InitialBalance { get; set; }
         public string Currency { get; set; } = "NGN";
 
     }

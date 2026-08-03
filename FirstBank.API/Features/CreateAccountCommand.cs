@@ -5,7 +5,7 @@ namespace FirstBank.API.Features
 {
     public class CreateAccountCommand : IRequest<ApiResponse<object>>
     {
-        public string AccountNumber { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
         public decimal InitialBalance { get; set; }
         public string Currency { get; set; } = "NGN";
     }

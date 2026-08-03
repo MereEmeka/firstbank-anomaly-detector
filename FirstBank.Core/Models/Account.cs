@@ -14,5 +14,12 @@ namespace FirstBank.Core.Models
         public decimal Balance { get; set; }
         public string Currency { get; set; } = "NGN";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // The Foreign Key connecting this account to a specific user
+        public Guid UserId { get; set; }
+
+        // The Navigation Property so EF Core knows how to load the User data
+        [ForeignKey("UserId")]
+        public AppUser User { get; set; } = null!;
     }
 }
