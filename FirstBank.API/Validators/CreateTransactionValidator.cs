@@ -13,12 +13,10 @@ namespace FirstBank.API.Validators
                 .LessThanOrEqualTo(5000000).WithMessage("Amount exceeds the NGN5,000,000 limit.");
 
             RuleFor(x => x.SourceAccountId)
-                .NotEmpty()
-                .Must(BeAValidGuid).WithMessage("Source Account ID must be a valid GUID.");
+                .NotEmpty().WithMessage("Source Account ID is required.");
 
             RuleFor(x => x.DestinationAccountId)
-                .NotEmpty()
-                .Must(BeAValidGuid).WithMessage("Destination Account ID must be a valid GUID.");
+                .NotEmpty().WithMessage("Destination Account ID is required");
 
             RuleFor(x => x.Description)
                 .NotEmpty()

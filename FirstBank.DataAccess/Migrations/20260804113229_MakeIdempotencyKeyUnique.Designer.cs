@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FirstBank.DataAccess.Migrations
 {
     [DbContext(typeof(FirstDBContext))]
-    [Migration("20260730113253_LinkAccountsToUsers")]
-    partial class LinkAccountsToUsers
+    [Migration("20260804113229_MakeIdempotencyKeyUnique")]
+    partial class MakeIdempotencyKeyUnique
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,9 +57,11 @@ namespace FirstBank.DataAccess.Migrations
 
             modelBuilder.Entity("FirstBank.Core.Models.AnomalyLog", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("FlagReason")
                         .IsRequired()
@@ -128,6 +130,9 @@ namespace FirstBank.DataAccess.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Key");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
 
                     b.ToTable("IdempotencyRecords");
                 });

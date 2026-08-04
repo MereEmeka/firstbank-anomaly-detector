@@ -128,6 +128,9 @@ namespace FirstBank.DataAccess.Migrations
 
                     b.HasKey("Key");
 
+                    b.HasIndex("Key")
+                        .IsUnique();
+
                     b.ToTable("IdempotencyRecords");
                 });
 

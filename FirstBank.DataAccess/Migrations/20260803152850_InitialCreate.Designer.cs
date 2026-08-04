@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FirstBank.DataAccess.Migrations
 {
     [DbContext(typeof(FirstDBContext))]
-    [Migration("20260723093439_InitialCreate")]
+    [Migration("20260803152850_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -45,16 +45,23 @@ namespace FirstBank.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("FirstBank.Core.Models.AnomalyLog", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("FlagReason")
                         .IsRequired()
@@ -82,6 +89,14 @@ namespace FirstBank.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -99,6 +114,8 @@ namespace FirstBank.DataAccess.Migrations
                         {
                             UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             Email = "admin@firstbank.com",
+                            FirstName = "System",
+                            LastName = "Administrator",
                             PasswordHash = "$2a$11$qJVo2QJYfU7wCijVxWbQSur31Z.IK02bPMaxULU51m5JshRZKaqjq",
                             Role = "Admin"
                         });
@@ -151,6 +168,17 @@ namespace FirstBank.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Transactions");
+                });
+
+            modelBuilder.Entity("FirstBank.Core.Models.Account", b =>
+                {
+                    b.HasOne("FirstBank.Core.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

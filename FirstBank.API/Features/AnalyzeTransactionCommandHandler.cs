@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using FirstBank.Core.Constants;
 
 
 namespace FirstBank.API.Features
@@ -38,35 +39,35 @@ namespace FirstBank.API.Features
             var flagReasons = new List<string>();
 
             //Rule 1: Massive Transaction Volume
-            if (request.TransactionAmount > 5_000_000)
+            if (request.TransactionAmount > SecurityThresholds.CriticalTransferLimit)
             {
-                riskScore += 50;
-                flagReasons.Add("Transaction exceeds 5,000,000 NGN threshold");
+                riskScore += SecurityThresholds.ScoreCriticalVolume;
+                flagReasons.Add("Transaction exceeds {SecurityThresholds.CriticalTransferLimit:N2} NGN threshold");
             }
-            else if (request.TransactionAmount > 1_000_000)
+            else if (request.TransactionAmount > SecurityThresholds.HighValueTransferLimit)
             {
-                riskScore += 25;
+                riskScore += SecurityThresholds.ScoreHighVolume;
                 flagReasons.Add("High Value transaction detected");
             }
 
             // Rule 2: Disproportionate ratio (transacting 10x their current balance)
-            if (account.Balance > 0 && (request.TransactionAmount / account.Balance) > 10m)
+            if (account.Balance > 0 && (request.TransactionAmount / account.Balance) > SecurityThresholds.MaxBalanceDepletionRatio)
             {
-                riskScore += 30;
+                riskScore += SecurityThresholds.ScoreAccountDrain;
                 flagReasons.Add("Unusual transaction amount");
             }
 
             //Rule 3: Geographic Anomaly Simulation
             if (!request.Location.Contains("Nigeria"))
             {
-                riskScore += 20;
+                riskScore += SecurityThresholds.ScoreGeographicAnomaly;
                 flagReasons.Add("Transaction originating outside primary service region");
             }
 
             //Cap the score at 100
-            if (riskScore > 100) riskScore = 100;
+            if (riskScore > SecurityThresholds.MaximumRiskScore) riskScore = SecurityThresholds.MaximumRiskScore;
 
-            bool isFraudulent = riskScore >= 70;
+            bool isFraudulent = riskScore >= SecurityThresholds.FraudTriggerScore;
 
             //3. Automatic Database Logging
             if (isFraudulent)
@@ -93,7 +94,7 @@ namespace FirstBank.API.Features
                 {
                     AccountId = account.Id,
                     RiskScore = riskScore,
-                    MaxScore = 100,
+                    MaxScore = SecurityThresholds.MaximumRiskScore,
                     IsFlagged = isFraudulent,
                     Reasons = flagReasons
                 }

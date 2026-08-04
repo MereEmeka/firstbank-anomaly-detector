@@ -36,35 +36,18 @@ namespace FirstBank.API.Controllers
         {
             // This Checks if header is completely missing
             if (string.IsNullOrWhiteSpace(idempotencyKey))
-            {
                 return BadRequest(new ApiResponse<object>
                 {
                     Success = false,
                     StatusCode = 400,
                     Message = "Missing X-Idempotency-key header."
                 });
-            }
-
-            // Input Validation
-            var validator = new CreateTransactionValidator();
-            var validationResult = await validator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = 400,
-                    Message = "Validation failed",
-                    Data = validationResult.Errors.Select(e => e.ErrorMessage)
-                });
-            }
 
             // Package the data into the Command Envelope
             var command = new CreateTransactionCommand
             {
-                SourceAccountId = Guid.Parse(request.SourceAccountId),
-                DestinationAccountId = Guid.Parse(request.DestinationAccountId),
+                SourceAccountId = request.SourceAccountId,
+                DestinationAccountId = request.DestinationAccountId,
                 Amount = request.Amount,
                 Description = request.Description,
                 IdempotencyKey = idempotencyKey
@@ -74,10 +57,8 @@ namespace FirstBank.API.Controllers
             var response = await _mediator.Send(command);
 
             // Check if the Handler rejected the request (e.g., Duplicate Idempotency Key)
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+            if (response.StatusCode == 400 || response.StatusCode == 403)
+                return StatusCode(response.StatusCode, response);
 
             // Return 201 Created
             return StatusCode(201, response);

@@ -1,7 +1,7 @@
 ﻿USE FirstBankDb;
 GO
 
-CREATE PROCEDURE ExecuteTransfer
+CREATE OR ALTER PROCEDURE [dbo].[ExecuteTransfer]
     @Id UNIQUEIDENTIFIER,
     @SourceAccountId UNIQUEIDENTIFIER,
     @DestinationAccountId UNIQUEIDENTIFIER,
@@ -11,6 +11,7 @@ CREATE PROCEDURE ExecuteTransfer
     @IdempotencyKey NVARCHAR(255)
 AS
 BEGIN
+    SET NOCOUNT ON;
     DECLARE @SourceBalance DECIMAL(18,2);
     
     BEGIN TRY
@@ -36,26 +37,25 @@ BEGIN
         UPDATE Accounts SET Balance = Balance + @Amount WHERE Id = @DestinationAccountId;
 
         -- 4. Insert the Main Ledger Receipt
-        INSERT INTO Transactions (Id, SourceAccountId, DestinationAccountId, Amount, Description, IsAnomaly, CreatedAt, Status)
+        INSERT INTO Transactions (Id, SourceAccountId, DestinationAccountId, Amount, Description, IsAnomalyFlagged, CreatedAt, Status)
         VALUES (@Id, @SourceAccountId, @DestinationAccountId, @Amount, @Description, @IsAnomaly, GETUTCDATE(), 'Completed');
 
         -- 5. Insert Idempotency Record
         INSERT INTO IdempotencyRecords ([Key], CreatedAt)
         VALUES (@IdempotencyKey, GETUTCDATE());
 
-        -- 6. Insert Anomaly Log if flagged
+        -- 6. Insert Anomaly Log if flagged (Fixed to match table definition)
         IF @IsAnomaly = 1
         BEGIN
-            INSERT INTO AnomalyLogs (Id, TransactionId, FlagReason, LoggedAt)
-            VALUES (NEWID(), @Id, 'Transaction amount exceeded the NGN 500,000 threshold.', GETUTCDATE());
+            INSERT INTO AnomalyLogs (TransactionId, FlagReason, LoggedAt)
+            VALUES (@Id, 'Transaction amount exceeded the threshold.', GETUTCDATE());
         END
 
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW; -- Sends the exact error message back to C#
+        THROW; 
     END CATCH
 END;
 GO
-

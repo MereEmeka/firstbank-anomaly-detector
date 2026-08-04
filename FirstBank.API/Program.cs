@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using FirstBank.API.Services;
 using FirstBank.DataAccess.Data;
 using FirstBank.DataAccess.Repositories; // Needed for ITransactionRepository
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,6 +10,10 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using MediatR;
+using FluentValidation;
+using FirstBank.API.Behaviors;
+using FirstBank.Core.Models;
 
 //This configures the Serilog logging framework to log to the console and a file
 Log.Logger = new LoggerConfiguration()
@@ -59,6 +64,9 @@ try
     // This is the Dependency Injection socket
     // It says - Whenever a controller asks for ITransactionRepository, give it a new Transaction Repository
     builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+
+    //THE EMAIL SERVICE
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
     // This turns on an In-Memory Cache socket for the controllers to use
     builder.Services.AddMemoryCache();
@@ -144,26 +152,11 @@ try
     //This tells MediatR to look inside the executing assembly for any Handlers
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
+    builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
     // Build the app pipeline
     var app = builder.Build();
-
-    //This block automatically creates the Database
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-       // try
-       // {
-            var context = services.GetRequiredService<FirstDBContext>();
-
-            //This applies any pending migrations and creates the database if it doesn't exist
-            context.Database.Migrate();
-      //  }
-       // catch (Exception ex)
-       // {
-           // var logger = services.GetRequiredService<ILogger<Program>>();
-           // logger.LogError(ex, "An error occured while creating/migrating the database");
-       // }
-    }
 
     /*
     //Temporary code to get the hash
@@ -189,20 +182,33 @@ try
     {
         errorApp.Run(async context =>
         {
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-
-            //This fetches the actual exception that caused the crash
             var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
             var exception = exceptionHandlerPathFeature?.Error;
 
-            Log.Error(exception, "An Unhandled Exception occured at {RequestPath}", context.Request.Path);
+            var statusCode = 500;
+            var message = "An unexpected error occured.";
 
-            await context.Response.WriteAsJsonAsync(new
+            if (exception is ValidationException validationException)
             {
-                success = false,
-                statusCode = 500,
-                message = "An unexpected error occurred."
+                statusCode = 400; //Bad Request
+                message = "Validation failed: " + string.Join(", ", validationException.Errors.Select(e => e.ErrorMessage));
+            }
+            else if (exception is InvalidOperationException)
+            {
+                statusCode = 400; //Bad Request(e.g User error - insufficient funds)
+                message = exception.Message;
+            }
+
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
+
+            if (statusCode == 500) Log.Error(exception, "Unhandled Exception");
+
+            await context.Response.WriteAsJsonAsync(new ApiResponse<object>
+            {
+                Success = false,
+                StatusCode = statusCode,
+                Message = message
             });
         });
     });
@@ -218,7 +224,30 @@ try
 
     app.MapControllers();
 
+
+    // --- DATABASE SEEDING SCRIPT ---
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+       // --- try
+       // --- {
+            var context = services.GetRequiredService<FirstDBContext>();
+            // Ensure the database is created and migrations are applied
+            context.Database.Migrate();
+
+            // Run our custom seed script
+            await DbInitializer.SeedAsync(context);
+       // --- }
+      // --- catch (Exception ex)
+        {
+            // Logs if something goes wrong during the seeding process
+         // ---  var logger = services.GetRequiredService<ILogger<Program>>();
+          // ---  logger.LogError(ex, "An error occurred while seeding the FirstBank database.");
+        }
+    }
+
     app.Run();
+
 }
 catch (Exception ex)
 {

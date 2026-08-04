@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using FirstBank.API.DTOs;
+﻿using FirstBank.API.DTOs;
+using FirstBank.API.Features;
+using FirstBank.API.Services;
 using FirstBank.Core.Models;
 using FirstBank.DataAccess.Data;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -17,15 +21,21 @@ namespace FirstBank.API.Controllers
         private readonly FirstDBContext _context;
         private readonly IConfiguration _config;
         private readonly ILogger<AuthController> _logger;
+        private readonly IEmailService _emailService;
+        private readonly IMediator _mediator;
 
         public AuthController(
             FirstDBContext context,
             IConfiguration config,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            IEmailService emailService,
+            IMediator mediator)
         {
             _context = context;
             _config = config;
             _logger = logger;
+            _emailService = emailService;
+            _mediator = mediator;
         }
 
         [HttpPost("register")]
@@ -46,6 +56,21 @@ namespace FirstBank.API.Controllers
 
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
+
+            string welcomeBody = $@"
+                <h2>Welcome to FirstBank, {user.FirstName}!</h2>
+                <p>Your account has been successfully created.</p>
+                <p><strong>Email Registered:</strong> {user.Email}</p>
+                <p><strong>Assigned Role:</strong> {user.Role}</p>
+                <hr />
+                <p>You can now log in to your account, check your balances, and test secure transfers.</p>
+                <p>Thank you for choosing FirstBank.</p>";
+
+            // Fire-and-forget background dispatch so the client isn't delayed
+            _ = _emailService.SendEmailAsync(
+                user.Email,
+                "Welcome to FirstBank - Account Created Successfully",
+                welcomeBody);
 
             return Ok(new { message = "User registered successfully." });
         }
@@ -68,7 +93,19 @@ namespace FirstBank.API.Controllers
             _logger.LogInformation("Login Success for User: {UserId}, Email: {Email}, IP: {IPAddress}",
                 user.UserId, user.Email, ipAddress);
 
-            //Geenerating the JWT Token
+            //4. FIRE THE LOGIN NOTIFICATION EMAIL ---
+            string emailBody = $@"
+                <h2>FirstBank Security Alert</h2>
+                <p>Hello {user.FirstName},</p>
+                <p>A new login was just detected on your FirstBank account from IP: <strong>{ipAddress}</strong>.</p>
+                <p><strong>Time:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</p>
+                <br/>
+                <p>If this was you, you can safely ignore this email. If you did not log in, please secure your account immediately.</p>";
+
+            // Fire-and-forget background dispatch so the client isn't delayed waiting for SMTP
+            _ = _emailService.SendEmailAsync(user.Email, "Security Alert: New Login Detected", emailBody);
+
+            //Generating the JWT Token
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
@@ -87,6 +124,25 @@ namespace FirstBank.API.Controllers
                 signingCredentials: credentials);
 
             return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            // Extract the UserId securely from the JWT token
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            var command = new ChangePasswordCommand
+            {
+                UserId = Guid.Parse(userIdClaim),
+                OldPassword = request.OldPassword,
+                NewPassword = request.NewPassword
+            };
+
+            var result = await _mediator.Send(command);
+            return StatusCode(result.StatusCode, result);
         }
     }
 }

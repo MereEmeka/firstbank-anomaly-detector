@@ -45,7 +45,10 @@ namespace FirstBank.DataAccess.Data
             modelBuilder.Entity<Transaction>()
                 .Property(t => t.Amount)
                 .HasPrecision(18, 2);
-        }
 
+            modelBuilder.Entity<IdempotencyRecord>()
+                .HasIndex(i => i.Key)
+                .IsUnique();
+        }
     }
 }
