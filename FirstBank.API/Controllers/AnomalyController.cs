@@ -34,6 +34,7 @@ namespace FirstBank.API.Controllers
 
         // GET: api/anomaly/logs
         [HttpGet("logs")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetSecurityLogs([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             if (pageNumber < 1) pageNumber = 1;

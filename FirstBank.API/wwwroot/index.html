@@ -1,0 +1,1663 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FirstBank — Core Banking Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0B1F3A;
+            --sapphire: #123A6B;
+            --sapphire-2: #1B4B85;
+            --gold: #C9A227;
+            --gold-soft: #E4C763;
+            --coral: #D9483A;
+            --mint: #2E9E6D;
+            --paper: #F7F5F0;
+            --paper-dim: #EEEAE0;
+            --text: #16233A;
+            --text-dim: #5B6B85;
+            --line: #DAD4C4;
+            --radius: 14px;
+            --shadow: 0 1px 2px rgba(11,31,58,.04), 0 8px 24px rgba(11,31,58,.06);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--paper);
+            color: var(--text);
+            font-family: 'Inter',system-ui,sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Fraunces',serif;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .mono {
+            font-family: 'IBM Plex Mono',monospace;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        input, select {
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 2px;
+        }
+
+        /* ============ TOASTS ============ */
+        #toast-stack {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 340px;
+        }
+
+        .toast {
+            background: var(--ink);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            font-size: 13.5px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: toastIn .25s ease;
+            border-left: 3px solid var(--gold);
+        }
+
+            .toast.error {
+                border-left-color: var(--coral);
+            }
+
+            .toast.success {
+                border-left-color: var(--mint);
+            }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============ AUTH SHELL ============ */
+        .auth-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width:860px) {
+            .auth-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-brand {
+                min-height: 260px;
+            }
+        }
+
+        .auth-brand {
+            background: radial-gradient(circle at 15% 20%, rgba(201,162,39,.14), transparent 45%), linear-gradient(160deg, var(--ink), var(--sapphire) 120%);
+            color: #F4EFE2;
+            padding: 56px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .auth-brand .ledger-lines {
+                position: absolute;
+                inset: 0;
+                opacity: .16;
+                pointer-events: none;
+            }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: var(--gold);
+            color: var(--ink);
+            font-family: 'Fraunces',serif;
+            font-weight: 700;
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+        }
+
+            .brand-mark.small {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+                margin: 0 auto 22px;
+            }
+
+        .auth-brand-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+            .auth-brand-top h1 {
+                font-size: 26px;
+                color: #fff;
+            }
+
+        .auth-brand h2.headline {
+            font-size: clamp(28px,4vw,40px);
+            line-height: 1.12;
+            color: #fff;
+            max-width: 460px;
+            margin-top: 36px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .headline em {
+            font-style: normal;
+            color: var(--gold-soft);
+        }
+
+        .brand-points {
+            list-style: none;
+            margin: 28px 0 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+            .brand-points li {
+                font-size: 13.5px;
+                color: #CBD6E8;
+                padding-left: 20px;
+                position: relative;
+            }
+
+                .brand-points li::before {
+                    content: "";
+                    position: absolute;
+                    left: 0;
+                    top: 7px;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 2px;
+                    background: var(--gold);
+                    transform: rotate(45deg);
+                }
+
+        .auth-brand-foot {
+            font-size: 12px;
+            color: #8FA1C0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .auth-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--paper-dim);
+            padding: 4px;
+            border-radius: 11px;
+            margin-bottom: 28px;
+        }
+
+            .auth-tabs button {
+                flex: 1;
+                border: none;
+                background: transparent;
+                padding: 10px 0;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13.5px;
+                color: var(--text-dim);
+                transition: .15s;
+            }
+
+                .auth-tabs button.tab-active {
+                    background: #fff;
+                    color: var(--ink);
+                    box-shadow: var(--shadow);
+                }
+
+        .auth-form h2 {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .auth-form p.sub {
+            color: var(--text-dim);
+            font-size: 13.5px;
+            margin: 0 0 24px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+            .field label {
+                display: block;
+                font-size: 12.5px;
+                font-weight: 600;
+                color: var(--text-dim);
+                margin-bottom: 6px;
+                letter-spacing: .02em;
+                text-transform: uppercase;
+            }
+
+            .field input, .field select {
+                width: 100%;
+                padding: 11px 13px;
+                border: 1.5px solid var(--line);
+                border-radius: 9px;
+                background: #fff;
+                color: var(--text);
+                transition: .15s;
+            }
+
+                .field input:focus, .field select:focus {
+                    border-color: var(--sapphire-2);
+                    outline: none;
+                    box-shadow: 0 0 0 3px rgba(27,75,133,.12);
+                }
+
+            .field .hint {
+                font-size: 11.5px;
+                color: var(--text-dim);
+                margin-top: 5px;
+            }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 9px;
+            padding: 12px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: .15s;
+        }
+
+        .btn-primary {
+            background: var(--ink);
+            color: #fff;
+            width: 100%;
+        }
+
+            .btn-primary:hover {
+                background: var(--sapphire);
+            }
+
+            .btn-primary:disabled {
+                opacity: .55;
+                cursor: not-allowed;
+            }
+
+        .btn-gold {
+            background: var(--gold);
+            color: var(--ink);
+        }
+
+            .btn-gold:hover {
+                background: var(--gold-soft);
+            }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1.5px solid var(--line);
+            color: var(--text);
+        }
+
+            .btn-ghost:hover {
+                border-color: var(--sapphire-2);
+            }
+
+        .btn-danger {
+            background: #FBEAE8;
+            color: var(--coral);
+        }
+
+        /* ============ APP SHELL ============ */
+        .app-shell {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: 100vh;
+        }
+
+        @media (max-width:760px) {
+            .app-shell {
+                grid-template-columns: 72px 1fr;
+            }
+
+            .sidebar nav button span {
+                display: none;
+            }
+
+            .brand-mark.small {
+                margin-bottom: 14px;
+            }
+        }
+
+        .sidebar {
+            background: var(--ink);
+            color: #CBD6E8;
+            padding: 22px 14px;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+            .sidebar nav {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+                flex: 1;
+            }
+
+                .sidebar nav button {
+                    display: flex;
+                    align-items: center;
+                    gap: 11px;
+                    text-align: left;
+                    background: transparent;
+                    border: none;
+                    color: #9FB1CC;
+                    padding: 11px 12px;
+                    border-radius: 9px;
+                    font-size: 13.5px;
+                    font-weight: 500;
+                    transition: .15s;
+                }
+
+                    .sidebar nav button .ic {
+                        width: 16px;
+                        text-align: center;
+                        font-size: 14px;
+                        flex: none;
+                    }
+
+                    .sidebar nav button:hover {
+                        background: rgba(255,255,255,.06);
+                        color: #fff;
+                    }
+
+                    .sidebar nav button.nav-active {
+                        background: var(--gold);
+                        color: var(--ink);
+                        font-weight: 700;
+                    }
+
+        .logout-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,.18);
+            color: #B9C6DC;
+            padding: 10px;
+            border-radius: 9px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+            .logout-btn:hover {
+                border-color: var(--coral);
+                color: #fff;
+            }
+
+        .canvas {
+            padding: 30px 40px 60px;
+            max-width: 1000px;
+        }
+
+        @media (max-width:760px) {
+            .canvas {
+                padding: 22px 18px 50px;
+            }
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .eyebrow {
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin: 0 0 4px;
+        }
+
+        .topbar h2 {
+            font-size: 26px;
+        }
+
+        .who {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .who span#who-name {
+                font-weight: 600;
+                font-size: 13.5px;
+            }
+
+        .pill {
+            background: var(--paper-dim);
+            border: 1px solid var(--line);
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            color: var(--sapphire);
+        }
+
+            .pill.admin {
+                background: #FBEAE8;
+                color: var(--coral);
+                border-color: #F2C9C4;
+            }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 24px 26px;
+            box-shadow: var(--shadow);
+        }
+
+            .card h3 {
+                font-size: 16px;
+                margin-bottom: 4px;
+            }
+
+            .card p.desc {
+                color: var(--text-dim);
+                font-size: 13px;
+                margin: 0 0 18px;
+            }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 22px;
+        }
+
+        @media (max-width:760px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* balance hero */
+        .balance-card {
+            background: linear-gradient(135deg,var(--ink),var(--sapphire) 130%);
+            color: #fff;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .balance-card::after {
+                content: "";
+                position: absolute;
+                right: -40px;
+                top: -40px;
+                width: 180px;
+                height: 180px;
+                border-radius: 50%;
+                background: radial-gradient(circle,rgba(201,162,39,.28),transparent 70%);
+            }
+
+            .balance-card .acct-no {
+                color: #9FB1CC;
+                font-size: 12.5px;
+                letter-spacing: .05em;
+            }
+
+            .balance-card .amount {
+                font-family: 'IBM Plex Mono',monospace;
+                font-size: 38px;
+                font-weight: 600;
+                margin: 10px 0 2px;
+                position: relative;
+                z-index: 1;
+            }
+
+            .balance-card .curr {
+                color: #CBD6E8;
+                font-size: 13px;
+            }
+
+            .balance-card .owner {
+                margin-top: 16px;
+                font-size: 13px;
+                color: #CBD6E8;
+            }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-row {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            flex: 1;
+            min-width: 140px;
+        }
+
+            .stat .k {
+                font-size: 11.5px;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: .04em;
+            }
+
+            .stat .v {
+                font-family: 'IBM Plex Mono',monospace;
+                font-size: 19px;
+                font-weight: 600;
+                margin-top: 3px;
+            }
+
+        /* ledger tape */
+        .ledger-tape {
+            list-style: none;
+            margin: 14px 0 0;
+            padding: 14px 0;
+            border-top: 1px dashed var(--line);
+            border-bottom: 1px dashed var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+            .ledger-tape li {
+                font-family: 'IBM Plex Mono',monospace;
+                font-size: 12.5px;
+                color: var(--text);
+                padding-left: 16px;
+                position: relative;
+            }
+
+                .ledger-tape li::before {
+                    content: "—";
+                    position: absolute;
+                    left: 0;
+                    color: var(--coral);
+                }
+
+            .ledger-tape.empty::before {
+                content: none;
+            }
+
+        /* risk gauge */
+        .gauge-wrap {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            flex-wrap: wrap;
+        }
+
+        .gauge-score {
+            font-family: 'IBM Plex Mono',monospace;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+            .gauge-score b {
+                font-size: 26px;
+                color: var(--text);
+                display: block;
+            }
+
+        .gauge-verdict {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+            .gauge-verdict.clear {
+                background: #E4F4EC;
+                color: var(--mint);
+            }
+
+            .gauge-verdict.flagged {
+                background: #FBEAE8;
+                color: var(--coral);
+            }
+
+        /* voucher / stamp slip */
+        .slip {
+            border: 1.5px dashed var(--line);
+            border-radius: 10px;
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+            background: #FCFBF7;
+        }
+
+            .slip .row {
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                padding: 6px 0;
+                border-bottom: 1px dotted var(--line);
+            }
+
+                .slip .row:last-child {
+                    border-bottom: none;
+                }
+
+                .slip .row .v {
+                    font-family: 'IBM Plex Mono',monospace;
+                    font-weight: 600;
+                }
+
+        .stamp {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            border: 2.5px solid currentColor;
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            transform: rotate(8deg);
+            opacity: 0;
+            animation: stampIn .35s ease .1s forwards;
+        }
+
+            .stamp.approved {
+                color: var(--mint);
+            }
+
+            .stamp.blocked {
+                color: var(--coral);
+            }
+
+        @keyframes stampIn {
+            from {
+                opacity: 0;
+                transform: rotate(8deg) scale(1.4);
+            }
+
+            to {
+                opacity: .9;
+                transform: rotate(8deg) scale(1);
+            }
+        }
+
+        form .btn-primary {
+            width: auto;
+            padding: 12px 22px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .idem-note {
+            font-size: 11.5px;
+            color: var(--text-dim);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead th {
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--text-dim);
+            padding: 8px 10px;
+            border-bottom: 1.5px solid var(--line);
+        }
+
+        tbody td {
+            padding: 10px;
+            border-bottom: 1px solid var(--paper-dim);
+        }
+
+        tbody tr:hover {
+            background: var(--paper-dim);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 36px 10px;
+            color: var(--text-dim);
+            font-size: 13.5px;
+        }
+
+        .atm-kiosk {
+            background: var(--ink);
+            color: #fff;
+            border-radius: 16px;
+            padding: 26px;
+            max-width: 360px;
+            box-shadow: var(--shadow);
+        }
+
+        .atm-screen {
+            background: #0D2A1A;
+            border: 2px solid #1E5C3A;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'IBM Plex Mono',monospace;
+            color: #5FE39A;
+            font-size: 12.5px;
+            min-height: 70px;
+            margin-bottom: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .atm-kiosk .field label {
+            color: #9FB1CC;
+        }
+
+        .atm-kiosk .field input {
+            background: #0F2A4C;
+            border-color: #274A73;
+            color: #fff;
+        }
+
+        .atm-vault-note {
+            font-size: 11.5px;
+            color: #8FA1C0;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-stack"></div>
+
+    <!-- ============================================================ AUTH VIEW ============================================================ -->
+    <section id="view-auth" class="auth-shell">
+        <div class="auth-brand">
+            <div>
+                <div class="auth-brand-top">
+                    <div class="brand-mark">FB</div>
+                    <h1>FirstBank</h1>
+                </div>
+                <h2 class="headline">Every transfer is scored <em>before</em> it clears.</h2>
+                <ul class="brand-points">
+                    <li>Rule-based anomaly engine flags high-risk transfers in real time</li>
+                    <li>Credentials hashed with BCrypt, sessions secured with JWT</li>
+                    <li>Built for the Backend Engineering SIWES internship programme</li>
+                </ul>
+            </div>
+            <div class="auth-brand-foot">FirstBank Core Banking Console — internal demo build</div>
+        </div>
+
+        <div class="auth-panel">
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <button type="button" data-tab="login" class="tab-active" id="tab-btn-login">Sign in</button>
+                    <button type="button" data-tab="register" id="tab-btn-register">Open an account</button>
+                </div>
+
+                <form id="form-login" class="auth-form">
+                    <h2>Welcome back</h2>
+                    <p class="sub">Sign in to view your balance and send transfers.</p>
+                    <div class="field">
+                        <label for="login-email">Email</label>
+                        <input id="login-email" type="email" required autocomplete="email" placeholder="you@firstbank.com" />
+                    </div>
+                    <div class="field">
+                        <label for="login-password">Password</label>
+                        <input id="login-password" type="password" required autocomplete="current-password" placeholder="••••••••" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
+                </form>
+
+                <form id="form-register" class="auth-form hidden">
+                    <h2>Open an account</h2>
+                    <p class="sub">Register for online access to FirstBank.</p>
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="reg-first">First name</label>
+                            <input id="reg-first" type="text" required autocomplete="given-name" />
+                        </div>
+                        <div class="field">
+                            <label for="reg-last">Last name</label>
+                            <input id="reg-last" type="text" required autocomplete="family-name" />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="reg-email">Email</label>
+                        <input id="reg-email" type="email" required autocomplete="email" />
+                    </div>
+                    <div class="field">
+                        <label for="reg-password">Password</label>
+                        <input id="reg-password" type="password" required minlength="6" autocomplete="new-password" />
+                        <div class="hint">At least 6 characters.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="register-submit">Create account</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================ APP VIEW ============================================================ -->
+    <div id="view-app" class="app-shell hidden">
+        <aside class="sidebar">
+            <div class="brand-mark small">FB</div>
+            <nav>
+                <button data-view="overview" class="nav-active"><span class="ic">◆</span><span>Overview</span></button>
+                <button data-view="transfer"><span class="ic">⇄</span><span>Transfer</span></button>
+                <button data-view="deposit"><span class="ic">＋</span><span>Deposit</span></button>
+                <button data-view="anomaly"><span class="ic">◎</span><span>Anomaly Scanner</span></button>
+                <button data-view="atm"><span class="ic">▤</span><span>ATM Simulator</span></button>
+                <button data-view="security"><span class="ic">⚿</span><span>Security</span></button>
+                <button data-view="admin" id="nav-admin" class="hidden"><span class="ic">⛨</span><span>Admin Logs</span></button>
+            </nav>
+            <button class="logout-btn" id="btn-logout">Log out</button>
+        </aside>
+
+        <main class="canvas">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow" id="topbar-eyebrow">Overview</p>
+                    <h2 id="topbar-title">Welcome back</h2>
+                </div>
+                <div class="who">
+                    <span id="who-name">—</span>
+                    <span id="who-role" class="pill">—</span>
+                </div>
+            </header>
+
+            <!-- OVERVIEW -->
+            <section data-panel="overview" class="panel">
+                <div class="grid-2">
+                    <div class="card balance-card" id="balance-card">
+                        <div class="acct-no mono" id="ov-acct-no">Loading account…</div>
+                        <div class="amount" id="ov-balance">— — —</div>
+                        <div class="curr" id="ov-currency">NGN</div>
+                        <div class="owner" id="ov-owner"></div>
+                        <div class="quick-actions">
+                            <button class="btn btn-gold" data-goto="transfer">Send money</button>
+                            <button class="btn btn-ghost" data-goto="deposit" style="color:#fff;border-color:rgba(255,255,255,.35)">Deposit</button>
+                        </div>
+                    </div>
+                    <div class="card" id="no-account-card" style="display:flex;flex-direction:column;justify-content:center;">
+                        <h3>No account on file</h3>
+                        <p class="desc">Open a NGN account to start banking with FirstBank.</p>
+                        <form id="form-open-account">
+                            <div class="field">
+                                <label for="open-initial">Opening balance (NGN)</label>
+                                <input id="open-initial" type="number" min="0" step="0.01" value="0" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary">Open account</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>How this console maps to your API</h3>
+                    <p class="desc">Every action below calls the endpoints you built — nothing here is mocked.</p>
+                    <div class="stat-row">
+                        <div class="stat"><div class="k">Auth</div><div class="v" style="font-size:13px;font-weight:500;">JWT Bearer</div></div>
+                        <div class="stat"><div class="k">Session</div><div class="v" style="font-size:13px;font-weight:500;" id="ov-session">Not stored — memory only</div></div>
+                        <div class="stat"><div class="k">Anomaly engine</div><div class="v" style="font-size:13px;font-weight:500;">Rule-based, live</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TRANSFER -->
+            <section data-panel="transfer" class="panel hidden">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Send a transfer</h3>
+                        <p class="desc">Every transfer is passed through the anomaly engine before it clears.</p>
+                        <form id="form-transfer">
+                            <div class="field">
+                                <label for="tr-dest">Destination account ID (GUID)</label>
+                                <input id="tr-dest" type="text" required placeholder="00000000-0000-0000-0000-000000000000" />
+                            </div>
+                            <div class="field">
+                                <label for="tr-amount">Amount (NGN)</label>
+                                <input id="tr-amount" type="number" min="0.01" step="0.01" required />
+                            </div>
+                            <div class="field">
+                                <label for="tr-desc">Description</label>
+                                <input id="tr-desc" type="text" required maxlength="255" placeholder="e.g. Rent, June" />
+                            </div>
+                            <div class="field">
+                                <label>Idempotency key</label>
+                                <input type="text" class="mono" id="tr-idem" readonly style="color:var(--text-dim);background:var(--paper-dim);" />
+                                <div class="hint">Generated per submission and sent as <span class="mono">X-Idempotency-key</span> — prevents double-charging on retry.</div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="transfer-submit">Send transfer</button>
+                                <span class="idem-note">Source account is your own account</span>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card" id="transfer-result-card" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- DEPOSIT -->
+            <section data-panel="deposit" class="panel hidden">
+                <div class="card" style="max-width:460px;">
+                    <h3>Deposit funds</h3>
+                    <p class="desc">Credits your own account directly.</p>
+                    <form id="form-deposit">
+                        <div class="field">
+                            <label for="dep-amount">Amount (NGN)</label>
+                            <input id="dep-amount" type="number" min="1" step="0.01" required />
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="deposit-submit">Deposit</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ANOMALY SCANNER -->
+            <section data-panel="anomaly" class="panel hidden">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Anomaly scanner</h3>
+                        <p class="desc">Runs the same rule-based engine that guards live transfers, without moving any money.</p>
+                        <form id="form-anomaly">
+                            <div class="field">
+                                <label for="an-account">Account ID (GUID)</label>
+                                <input id="an-account" type="text" required placeholder="defaults to your account" />
+                            </div>
+                            <div class="field">
+                                <label for="an-amount">Transaction amount (NGN)</label>
+                                <input id="an-amount" type="number" min="1" step="0.01" required />
+                            </div>
+                            <div class="field">
+                                <label for="an-location">Location</label>
+                                <input id="an-location" type="text" value="Lagos, Nigeria" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="anomaly-submit">Run scan</button>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h3>Risk verdict</h3>
+                        <div class="gauge-wrap">
+                            <svg viewBox="0 0 120 68" width="150" height="90" id="gauge-svg">
+                                <path d="M10,64 A50,50 0 0,1 110,64" fill="none" stroke="#EEEAE0" stroke-width="10" stroke-linecap="round" />
+                                <path id="gauge-fill" d="M10,64 A50,50 0 0,1 110,64" fill="none" stroke="#2E9E6D" stroke-width="10" stroke-linecap="round"
+                                      stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset .5s ease, stroke .3s ease;" />
+                            </svg>
+                            <div class="gauge-score">
+                                Risk score
+                                <b id="gauge-number">—</b>
+                                <span class="gauge-verdict clear hidden" id="gauge-verdict">—</span>
+                            </div>
+                        </div>
+                        <ul class="ledger-tape empty" id="anomaly-reasons"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ATM SIMULATOR -->
+            <section data-panel="atm" class="panel hidden">
+                <div class="card">
+                    <h3>ATM simulator</h3>
+                    <p class="desc">Simulates the card-and-PIN flow — separate short-lived token from your account session.</p>
+                    <div class="atm-kiosk">
+                        <div class="atm-screen" id="atm-screen">INSERT CARD TO BEGIN</div>
+
+                        <form id="form-atm-auth">
+                            <div class="field">
+                                <label for="atm-card">Card number</label>
+                                <input id="atm-card" type="text" maxlength="16" required placeholder="1234567890123456" />
+                            </div>
+                            <div class="field">
+                                <label for="atm-pin">PIN</label>
+                                <input id="atm-pin" type="password" maxlength="6" required />
+                            </div>
+                            <button type="submit" class="btn btn-gold" id="atm-auth-submit" style="width:100%;">Insert card</button>
+                        </form>
+
+                        <form id="form-atm-withdraw" class="hidden" style="margin-top:14px;">
+                            <div class="field">
+                                <label for="atm-amount">Withdraw amount (NGN)</label>
+                                <input id="atm-amount" type="number" min="500" max="150000" step="100" required />
+                            </div>
+                            <button type="submit" class="btn btn-gold" id="atm-withdraw-submit" style="width:100%;">Withdraw</button>
+                        </form>
+
+                        <div class="atm-vault-note" id="atm-vault-note"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECURITY -->
+            <section data-panel="security" class="panel hidden">
+                <div class="card" style="max-width:460px;">
+                    <h3>Change password</h3>
+                    <p class="desc">You'll stay signed in on this device after changing it.</p>
+                    <form id="form-password">
+                        <div class="field">
+                            <label for="pw-old">Current password</label>
+                            <input id="pw-old" type="password" required />
+                        </div>
+                        <div class="field">
+                            <label for="pw-new">New password</label>
+                            <input id="pw-new" type="password" required minlength="6" />
+                            <div class="hint">At least 6 characters.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="password-submit">Update password</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ADMIN -->
+            <section data-panel="admin" class="panel hidden">
+                <div class="card">
+                    <h3>Anomaly log — admin only</h3>
+                    <p class="desc">Calls the Admin-role-gated endpoint. Paginated.</p>
+                    <div id="admin-table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Logged at</th><th>Transaction ID</th><th>Flag reason</th></tr>
+                            </thead>
+                            <tbody id="admin-tbody"></tbody>
+                        </table>
+                        <div class="empty-state hidden" id="admin-empty">No anomalies logged for this page.</div>
+                    </div>
+                    <div class="form-actions" style="margin-top:16px;">
+                        <button class="btn btn-ghost" id="admin-prev">← Previous</button>
+                        <span class="idem-note" id="admin-page-label">Page 1</span>
+                        <button class="btn btn-ghost" id="admin-next">Next →</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+(function(){
+  "use strict";
+
+  // ============ CONFIG ============
+  const API_BASE = ""; // same-origin — served from this app's own wwwroot
+  const CLAIM_ROLE  = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+  const CLAIM_EMAIL = "http://schemas.xmlsoft.org/ws/2005/05/identity/claims/emailaddress";
+
+  // In-memory only — deliberately never written to localStorage/sessionStorage,
+  // so a JWT can't be lifted via a storage-reading XSS payload. Refreshing the
+  // page ends the session, same as most banking apps do on tab close.
+  const state = {
+    token: null,
+    role: null,
+    email: null,
+    accountId: null,
+    accountNumber: null,
+    fullName: null,
+    atmToken: null,
+    adminPage: 1,
+    adminPageSize: 10
+  };
+
+  // ============ HELPERS ============
+  function $(sel, root){ return (root||document).querySelector(sel); }
+  function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
+
+  function toast(message, type){
+    const stack = $("#toast-stack");
+    const el = document.createElement("div");
+    el.className = "toast" + (type ? " " + type : "");
+    el.textContent = message;
+    stack.appendChild(el);
+    setTimeout(()=>{ el.style.transition="opacity .25s"; el.style.opacity="0"; setTimeout(()=>el.remove(),250); }, 4200);
+  }
+
+  function money(n, currency){
+    const v = Number(n || 0);
+    try{
+      return new Intl.NumberFormat('en-NG', { style:'currency', currency: currency || 'NGN' }).format(v);
+    }catch(e){
+      return (currency||'NGN') + ' ' + v.toFixed(2);
+    }
+  }
+
+  function decodeJwt(token){
+    try{
+      const payload = token.split('.')[1];
+      const json = atob(payload.replace(/-/g,'+').replace(/_/g,'/'));
+      return JSON.parse(decodeURIComponent(escape(json)));
+    }catch(e){ return null; }
+  }
+
+  function setBusy(btn, busy, label){
+    if(!btn) return;
+    if(busy){
+      btn.dataset.label = btn.textContent;
+      btn.textContent = label || "Working…";
+      btn.disabled = true;
+    } else {
+      btn.textContent = btn.dataset.label || btn.textContent;
+      btn.disabled = false;
+    }
+  }
+
+  async function api(path, opts){
+    opts = opts || {};
+    const headers = Object.assign({ "Content-Type":"application/json" }, opts.headers || {});
+    if(opts.auth){
+      headers["Authorization"] = "Bearer " + (opts.atm ? state.atmToken : state.token);
+    }
+    let res;
+    try{
+      res = await fetch(API_BASE + path, {
+        method: opts.method || "GET",
+        headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    }catch(networkErr){
+      throw { networkError: true, message: "Could not reach the API. Is the backend running?" };
+    }
+
+    let data = null;
+    try{ data = await res.json(); }catch(e){ /* no body */ }
+
+    if(res.status === 401 && opts.auth && !opts.atm){
+      logout();
+      toast("Your session expired — please sign in again.", "error");
+    }
+
+    if(!res.ok){
+      const msg = (data && data.message) || (data && data.Message) || ("Request failed (" + res.status + ")");
+      throw { status: res.status, message: msg, data };
+    }
+    return data;
+  }
+
+  // ============ VIEW SWITCHING ============
+  function showAuth(){
+    $("#view-auth").classList.remove("hidden");
+    $("#view-app").classList.add("hidden");
+  }
+  function showApp(){
+    $("#view-auth").classList.add("hidden");
+    $("#view-app").classList.remove("hidden");
+  }
+
+  function switchAuthTab(tab){
+    $all(".auth-tabs button").forEach(b => b.classList.toggle("tab-active", b.dataset.tab === tab));
+    $("#form-login").classList.toggle("hidden", tab !== "login");
+    $("#form-register").classList.toggle("hidden", tab !== "register");
+  }
+  $all(".auth-tabs button").forEach(b => b.addEventListener("click", ()=> switchAuthTab(b.dataset.tab)));
+
+  function switchPanel(view){
+    $all(".sidebar nav button[data-view]").forEach(b => b.classList.toggle("nav-active", b.dataset.view === view));
+    $all(".panel").forEach(p => p.classList.toggle("hidden", p.dataset.panel !== view));
+    const titles = {
+      overview: ["Overview", "Welcome back" + (state.fullName ? ", " + state.fullName.split(" ")[0] : "")],
+      transfer: ["Move money", "Send a transfer"],
+      deposit: ["Move money", "Deposit funds"],
+      anomaly: ["Fraud engine", "Anomaly scanner"],
+      atm: ["Kiosk", "ATM simulator"],
+      security: ["Account", "Security"],
+      admin: ["Admin", "Anomaly log"]
+    };
+    const t = titles[view] || ["", ""];
+    $("#topbar-eyebrow").textContent = t[0];
+    $("#topbar-title").textContent = t[1];
+    if(view === "overview") loadOverview();
+    if(view === "admin") loadAdminLogs();
+  }
+  $all(".sidebar nav button[data-view]").forEach(b => b.addEventListener("click", ()=> switchPanel(b.dataset.view)));
+  $all("[data-goto]").forEach(b => b.addEventListener("click", ()=> switchPanel(b.dataset.goto)));
+
+  // ============ AUTH ============
+  $("#form-login").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#login-submit");
+    setBusy(btn, true, "Signing in…");
+    try{
+      const data = await api("/api/auth/login", {
+        method:"POST",
+        body:{ email: $("#login-email").value.trim(), password: $("#login-password").value }
+      });
+      const token = data.token || data.Token;
+      onLoggedIn(token);
+    }catch(err){
+      toast(err.message || "Sign in failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  $("#form-register").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#register-submit");
+    setBusy(btn, true, "Creating account…");
+    try{
+      // Note: intentionally never sends a "role" field — the API should assign
+      // Customer server-side regardless of what a client sends.
+      await api("/api/auth/register", {
+        method:"POST",
+        body:{
+          firstName: $("#reg-first").value.trim(),
+          lastName: $("#reg-last").value.trim(),
+          email: $("#reg-email").value.trim(),
+          password: $("#reg-password").value
+        }
+      });
+      toast("Account created — sign in to continue.", "success");
+      switchAuthTab("login");
+      $("#login-email").value = $("#reg-email").value.trim();
+      $("#form-register").reset();
+    }catch(err){
+      toast(err.message || "Registration failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  function onLoggedIn(token){
+    state.token = token;
+    const payload = decodeJwt(token) || {};
+    state.role = payload[CLAIM_ROLE] || payload.role || "Customer";
+    state.email = payload[CLAIM_EMAIL] || payload.email || "";
+    $("#who-name").textContent = state.email;
+    $("#who-role").textContent = state.role;
+    $("#who-role").classList.toggle("admin", state.role === "Admin");
+    $("#nav-admin").classList.toggle("hidden", state.role !== "Admin");
+    showApp();
+    switchPanel("overview");
+    toast("Signed in successfully.", "success");
+  }
+
+  function logout(){
+    state.token = null; state.role = null; state.email = null;
+    state.accountId = null; state.accountNumber = null; state.fullName = null;
+    showAuth();
+    switchAuthTab("login");
+  }
+  $("#btn-logout").addEventListener("click", logout);
+
+  // ============ OVERVIEW ============
+  async function loadOverview(){
+    try{
+      const data = await api("/api/accounts/me", { auth:true });
+      const acct = data.data || data.Data;
+      state.accountNumber = acct.accountNumber || acct.AccountNumber;
+      // Requires AccountDashboardDto to expose the account's Guid Id (see backend note).
+      state.accountId = acct.accountId || acct.id || acct.Id || null;
+      state.fullName = (acct.user && (acct.user.fullName || acct.user.FullName)) || (acct.User && acct.User.FullName) || "";
+
+      $("#ov-acct-no").textContent = "Account No. " + (acct.accountNumber || acct.AccountNumber);
+      $("#ov-balance").textContent = money(acct.balance ?? acct.Balance, "NGN");
+      $("#ov-owner").textContent = state.fullName;
+      $("#balance-card").style.display = "";
+      $("#no-account-card").style.display = "none";
+      $("#topbar-title").textContent = "Welcome back" + (state.fullName ? ", " + state.fullName.split(" ")[0] : "");
+
+      if(!state.accountId){
+        $("#ov-session").textContent = "Balance loaded — no account ID in response";
+      }
+    }catch(err){
+      if(err.status === 404){
+        $("#balance-card").style.display = "none";
+        $("#no-account-card").style.display = "flex";
+      } else {
+        toast(err.message || "Could not load account.", "error");
+      }
+    }
+  }
+
+  $("#form-open-account").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    try{
+      await api("/api/accounts", {
+        method:"POST", auth:true,
+        body:{ initialBalance: Number($("#open-initial").value), currency: "NGN" }
+      });
+      toast("Account opened.", "success");
+      loadOverview();
+    }catch(err){
+      toast(err.message || "Could not open account.", "error");
+    }
+  });
+
+  // ============ TRANSFER ============
+  function newIdemKey(){
+    return (crypto.randomUUID ? crypto.randomUUID() :
+      'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+        const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8); return v.toString(16);
+      }));
+  }
+  function primeIdemKey(){ $("#tr-idem").value = newIdemKey(); }
+  primeIdemKey();
+
+  $("#form-transfer").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if(!state.accountId){
+      toast("Missing your account ID from /api/accounts/me — see backend note about AccountDashboardDto.", "error");
+      return;
+    }
+    const btn = $("#transfer-submit");
+    setBusy(btn, true, "Sending…");
+    const amount = Number($("#tr-amount").value);
+    const dest = $("#tr-dest").value.trim();
+    const desc = $("#tr-desc").value.trim();
+    const idem = $("#tr-idem").value;
+    try{
+      const res = await api("/api/transactions", {
+        method:"POST", auth:true,
+        headers: { "X-Idempotency-key": idem },
+        body:{ sourceAccountId: state.accountId, destinationAccountId: dest, amount, description: desc }
+      });
+      renderTransferResult(true, { amount, desc, idem, data: res.data || res.Data, message: res.message || res.Message });
+      $("#form-transfer").reset();
+      $("#an-location") // no-op guard
+      primeIdemKey();
+      loadOverview();
+    }catch(err){
+      renderTransferResult(false, { amount, desc, idem, err });
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  function renderTransferResult(success, ctx){
+    const card = $("#transfer-result-card");
+    card.style.display = "block";
+    const reasons = (ctx.err && ctx.err.data && (ctx.err.data.data || ctx.err.data.Data));
+    const reasonList = (reasons && (reasons.reasons || reasons.Reasons)) || [];
+    const score = (reasons && (reasons.riskScore ?? reasons.RiskScore));
+
+    card.innerHTML = `
+      <h3>${success ? "Transfer submitted" : "Transfer blocked"}</h3>
+      <div class="slip" style="margin-top:14px;">
+        <span class="stamp ${success ? 'approved' : 'blocked'}">${success ? 'Cleared' : 'Blocked'}</span>
+        <div class="row"><span>Amount</span><span class="v">${money(ctx.amount)}</span></div>
+        <div class="row"><span>Description</span><span class="v">${ctx.desc}</span></div>
+        <div class="row"><span>Idempotency key</span><span class="v mono" style="font-size:11px;">${ctx.idem.slice(0,13)}…</span></div>
+        ${score !== undefined ? `<div class="row"><span>Risk score</span><span class="v">${score} / 100</span></div>` : ""}
+      </div>
+      ${reasonList.length ? `<ul class="ledger-tape">${reasonList.map(r=>`<li>${r}</li>`).join("")}</ul>` : ""}
+      ${!success ? `<p class="desc" style="margin-top:12px;">${(ctx.err && ctx.err.message) || "This transfer did not clear."}</p>` : ""}
+    `;
+  }
+
+  // ============ DEPOSIT ============
+  $("#form-deposit").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if(!state.accountId){
+      toast("Missing your account ID from /api/accounts/me — see backend note about AccountDashboardDto.", "error");
+      return;
+    }
+    const btn = $("#deposit-submit");
+    setBusy(btn, true, "Depositing…");
+    try{
+      await api("/api/accounts/" + state.accountId + "/deposit", {
+        method:"POST", auth:true,
+        body:{ amount: Number($("#dep-amount").value) }
+      });
+      toast("Deposit successful.", "success");
+      $("#form-deposit").reset();
+      loadOverview();
+    }catch(err){
+      toast(err.message || "Deposit failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  // ============ ANOMALY SCANNER ============
+  function paintGauge(score){
+    const total = 157; // path length
+    const offset = total * (1 - Math.min(Math.max(score,0),100)/100);
+    const fill = $("#gauge-fill");
+    fill.style.strokeDashoffset = offset;
+    fill.style.stroke = score >= 70 ? "var(--coral)" : score >= 40 ? "var(--gold)" : "var(--mint)";
+    $("#gauge-number").textContent = score;
+    const verdict = $("#gauge-verdict");
+    verdict.classList.remove("hidden");
+    if(score >= 70){ verdict.textContent = "Flagged"; verdict.className = "gauge-verdict flagged"; }
+    else { verdict.textContent = "Clear"; verdict.className = "gauge-verdict clear"; }
+  }
+
+  $("#form-anomaly").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#anomaly-submit");
+    setBusy(btn, true, "Scanning…");
+    const acctField = $("#an-account").value.trim();
+    const accountId = acctField || state.accountId;
+    if(!accountId){
+      toast("No account ID available — enter one or open an account first.", "error");
+      setBusy(btn, false);
+      return;
+    }
+    try{
+      const res = await api("/api/anomaly/scan", {
+        method:"POST", auth:true,
+        body:{
+          accountId,
+          transactionAmount: Number($("#an-amount").value),
+          location: $("#an-location").value.trim()
+        }
+      });
+      const d = res.data || res.Data || {};
+      paintGauge(d.riskScore ?? d.RiskScore ?? 0);
+      const reasons = d.reasons || d.Reasons || [];
+      const list = $("#anomaly-reasons");
+      list.classList.toggle("empty", reasons.length === 0);
+      list.innerHTML = reasons.length ? reasons.map(r=>`<li>${r}</li>`).join("") : "";
+      if(!reasons.length){ list.innerHTML = ""; }
+    }catch(err){
+      toast(err.message || "Scan failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  // ============ ATM SIMULATOR ============
+  function atmLog(text){ $("#atm-screen").textContent = text; }
+
+  $("#form-atm-auth").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#atm-auth-submit");
+    setBusy(btn, true, "Reading card…");
+    atmLog("READING CARD…");
+    try{
+      const res = await api("/api/atm/insert-card", {
+        method:"POST",
+        body:{ cardNumber: $("#atm-card").value.trim(), pin: $("#atm-pin").value }
+      });
+      const d = res.data || res.Data || {};
+      state.atmToken = d.token || d.Token;
+      atmLog((res.message || res.Message || "AUTHENTICATED") + "\n\nENTER AMOUNT TO WITHDRAW");
+      $("#form-atm-auth").classList.add("hidden");
+      $("#form-atm-withdraw").classList.remove("hidden");
+    }catch(err){
+      atmLog("DECLINED\n" + (err.message || "Card not accepted."));
+      toast(err.message || "ATM auth failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  $("#form-atm-withdraw").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#atm-withdraw-submit");
+    setBusy(btn, true, "Dispensing…");
+    atmLog("PROCESSING…");
+    try{
+      const res = await api("/api/atm/withdraw", {
+        method:"POST", auth:true, atm:true,
+        body:{ amount: Number($("#atm-amount").value) }
+      });
+      const d = res.data || res.Data || {};
+      atmLog("PLEASE TAKE YOUR CASH\n\nDispensed: " + money(d.dispensed ?? d.Dispensed) +
+             "\nNew balance: " + money(d.remainingBalance ?? d.RemainingBalance));
+      $("#atm-vault-note").textContent = "ATM reserve remaining: " + money(d.atmReserve ?? d.AtmReserve);
+      $("#form-atm-withdraw").reset();
+    }catch(err){
+      atmLog("TRANSACTION DECLINED\n" + (err.message || "Withdrawal failed."));
+      toast(err.message || "Withdrawal failed.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  // ============ SECURITY ============
+  $("#form-password").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = $("#password-submit");
+    setBusy(btn, true, "Updating…");
+    try{
+      await api("/api/auth/change-password", {
+        method:"POST", auth:true,
+        body:{ oldPassword: $("#pw-old").value, newPassword: $("#pw-new").value }
+      });
+      toast("Password updated.", "success");
+      $("#form-password").reset();
+    }catch(err){
+      toast(err.message || "Could not update password.", "error");
+    }finally{
+      setBusy(btn, false);
+    }
+  });
+
+  // ============ ADMIN LOGS ============
+  async function loadAdminLogs(){
+    try{
+      const res = await api("/api/transactions/anomalies?pageNumber=" + state.adminPage + "&pageSize=" + state.adminPageSize, { auth:true });
+      const logs = res.data || res.Data || [];
+      const tbody = $("#admin-tbody");
+      tbody.innerHTML = "";
+      $("#admin-empty").classList.toggle("hidden", logs.length > 0);
+      logs.forEach(l=>{
+        const tr = document.createElement("tr");
+        const loggedAt = l.loggedAt || l.LoggedAt || "";
+        const txId = l.transactionId || l.TransactionId || "";
+        const reason = l.flagReason || l.FlagReason || "";
+        tr.innerHTML = `<td class="mono">${new Date(loggedAt).toLocaleString()}</td><td class="mono">${String(txId).slice(0,8)}…</td><td>${reason}</td>`;
+        tbody.appendChild(tr);
+      });
+      $("#admin-page-label").textContent = "Page " + state.adminPage;
+    }catch(err){
+      toast(err.message || "Could not load anomaly log.", "error");
+    }
+  }
+  $("#admin-prev").addEventListener("click", ()=>{ if(state.adminPage>1){ state.adminPage--; loadAdminLogs(); } });
+  $("#admin-next").addEventListener("click", ()=>{ state.adminPage++; loadAdminLogs(); });
+
+  // ============ INIT ============
+  showAuth();
+})();
+    </script>
+</body>
+</html>

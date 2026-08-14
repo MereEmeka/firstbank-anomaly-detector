@@ -29,17 +29,22 @@ namespace FirstBank.DataAccess.Data
             //This creates a static GUID for the Admin so EF Core does not recreate it on every migration
             var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111"); //Follws the 8-4-4-4-12 Format
 
-            modelBuilder.Entity<AppUser>().HasData(
-                new AppUser
-                {
-                    UserId = adminId,
-                    FirstName = "System",
-                    LastName = "Administrator",
-                    Email = "admin@firstbank.com",
-                    PasswordHash = "$2a$11$qJVo2QJYfU7wCijVxWbQSur31Z.IK02bPMaxULU51m5JshRZKaqjq",
-                    Role = "Admin"
-                }
+            modelBuilder.Entity<AppUser>(entity =>
+            {
+                entity.HasIndex(u => u.Email).IsUnique();
+
+                entity.HasData(
+                    new AppUser
+                    {
+                        UserId = adminId,
+                        FirstName = "System",
+                        LastName = "Administrator",
+                        Email = "admin@firstbank.com",
+                        PasswordHash = "$2a$11$qJVo2QJYfU7wCijVxWbQSur31Z.IK02bPMaxULU51m5JshRZKaqjq",
+                        Role = "Admin"
+                    }
             );
+        });
 
             //Tells SQL Server to use decimal(18,2) for the Amount property in the Transaction class
             modelBuilder.Entity<Transaction>()

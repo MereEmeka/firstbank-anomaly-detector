@@ -12,7 +12,7 @@ namespace FirstBank.API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")] // This translates to /api/accounts
+    [Route("api/[controller]")] // Translates to /api/accounts
     public class AccountsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -22,11 +22,42 @@ namespace FirstBank.API.Controllers
             _mediator = mediator;
         }
 
+        // NEW: Endpoint for the dynamic SPA Dashboard (GET /api/accounts/me)
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyAccount()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = 401,
+                    Message = "Invalid token claims. Please log in again."
+                });
+            }
+
+            var query = new GetMyAccountDetailsQuery { UserId = userIdClaim };
+            var result = await _mediator.Send(query);
+
+            if (result == null || !result.Success)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = 404,
+                    Message = "Account not found for the current user."
+                });
+            }
+
+            return Ok(result);
+        }
+
         // POST: api/accounts
         [HttpPost]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest request)
         {
-            // 1. EXTRACT THE IDENTITY: Read the UserId directly from the encrypted JWT
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
@@ -41,21 +72,19 @@ namespace FirstBank.API.Controllers
 
             var currentUserId = Guid.Parse(userIdClaim);
 
-            // 2. PACKAGE THE COMMAND: Pass the UserId instead of an AccountNumber
             var command = new CreateAccountCommand
             {
-                UserId = currentUserId, // Securely pulled from the token
+                UserId = currentUserId,
                 InitialBalance = request.InitialBalance,
                 Currency = request.Currency
             };
 
-            // 3. SEND TO HANDLER: Let MediatR do the database work
             var result = await _mediator.Send(command);
             return StatusCode(result.StatusCode, result);
         }
 
         // GET: api/accounts/{accountId}/balance
-        [HttpGet("{accountId}/balance")]
+        [HttpGet("balance/{accountId}")]
         public async Task<IActionResult> GetBalance(string accountId)
         {
             if (!Guid.TryParse(accountId, out Guid validGuid))
@@ -68,40 +97,32 @@ namespace FirstBank.API.Controllers
                 });
             }
 
-            // This fetches the balance using MediatR query pipeline
-            var balance = await _mediator.Send(new GetAccountBalanceQuery { AccountId = validGuid });
+            // 1. Extract the logged-in user's ID from their JWT token
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
 
-            if (balance is null)
+            // 2. Pass BOTH the AccountId and the UserId to the mediator
+            var query = new GetAccountBalanceQuery
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = 400,
-                    Message = "Account not found."
-                });
-            }
+                AccountId = validGuid,
+                UserId = Guid.Parse(userIdClaim!) // This prevents User A from viewing User B's balance
+            };
 
-            // This returns the Success envelope
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = 200,
-                Message = "Balance retrieved successfully.",
-                Data = new { balance = balance, currency = "NGN" }
-            });
+            var balanceResponse = await _mediator.Send(query);
+
+            // 3. The mediator already returns a perfectly formatted ApiResponse, 
+            // so we can just return it directly instead of wrapping it in a new one.
+            return StatusCode(balanceResponse.StatusCode, balanceResponse);
         }
 
         // POST: api/accounts/{accountId}/deposit
         [HttpPost("{accountId}/deposit")]
         public async Task<IActionResult> MakeDeposit(string accountId, [FromBody] DepositRequest request)
         {
-            // Validate the GUID from the URL
             if (!Guid.TryParse(accountId, out Guid validAccountId))
             {
                 return BadRequest(new ApiResponse<object> { Success = false, StatusCode = 400, Message = "Invalid Account ID format." });
             }
 
-            // Extract the Identity securely
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
             {

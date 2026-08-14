@@ -60,6 +60,9 @@ try
                     maxRetryDelay: TimeSpan.FromSeconds(10),
                     errorNumbersToAdd: null);
             }));
+    //ATM DB Context
+    builder.Services.AddDbContext<AtmDBContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
     // This is the Dependency Injection socket
     // It says - Whenever a controller asks for ITransactionRepository, give it a new Transaction Repository
@@ -127,7 +130,7 @@ try
             context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.HttpContext.Response.ContentType = "application/json";
 
-            Log.Warning("Rate limit triggered for IP: {IPAddress} on Endpoint: {Endpoint",
+            Log.Warning("Rate limit triggered for IP: {IPAddress} on Endpoint: {Endpoint}",
                 context.HttpContext.Connection.RemoteIpAddress, context.HttpContext.Request.Path);
 
             if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
@@ -215,8 +218,8 @@ try
 
     app.UseRateLimiter();
 
-    //app.UseDefaultFiles(); // Automatically serves index.html when hitting localhost:<port>
-    //app.UseStaticFiles(); // Enables ASP.NET Core to serve files from the wwwroot folder
+    app.UseDefaultFiles(); // Automatically serves index.html when hitting localhost:<port>
+    app.UseStaticFiles(); // Enables ASP.NET Core to serve files from the wwwroot folder
 
     // IMPORTANT: Authentication (Who are you?) MUST happen before Authorization (What can you do?)
     app.UseAuthentication();
@@ -229,33 +232,36 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-       // --- try
-       // --- {
-            var context = services.GetRequiredService<FirstDBContext>();
-            // Ensure the database is created and migrations are applied
-            context.Database.Migrate();
-
-            // Run our custom seed script
-            await DbInitializer.SeedAsync(context);
-       // --- }
-      // --- catch (Exception ex)
+        try
         {
-            // Logs if something goes wrong during the seeding process
-         // ---  var logger = services.GetRequiredService<ILogger<Program>>();
-          // ---  logger.LogError(ex, "An error occurred while seeding the FirstBank database.");
+            // 1. Migrate Core Banking Context
+            var coreContext = services.GetRequiredService<FirstDBContext>();
+            coreContext.Database.Migrate();
+
+            // 2. Migrate ATM Hardware Context
+            var atmContext = services.GetRequiredService<AtmDBContext>();
+            atmContext.Database.Migrate();
+
+            // 3. Run custom seed script
+            await DbInitializer.SeedAsync(coreContext);
         }
-    }
-
+        catch (Exception ex)
+        {
+            // Logs safely without crashing the API host
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while seeding the databases.");
+        }
+    } 
     app.Run();
+    } 
 
-}
-catch (Exception ex)
-{
-    //This logs the exact reason if the app crashes on startup
-    Log.Fatal(ex, "Host terminated unexpectedly");
-}
-finally
-{
-    //This ensures all logs are safely written to the log file before the app exits
-    Log.CloseAndFlush();
-}
+    catch (Exception ex)
+    {
+        //This logs the exact reason if the app crashes on startup
+        Log.Fatal(ex, "Host terminated unexpectedly");
+    }
+        finally
+    {
+        //This ensures all logs are safely written to the log file before the app exits
+        Log.CloseAndFlush();
+    }

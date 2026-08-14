@@ -5,6 +5,7 @@ namespace FirstBank.API.Features
 {
     public class CreateTransactionCommand : IRequest<ApiResponse<object>>
     {
+        public Guid UserId { get; set; }
         public Guid SourceAccountId { get; set; }
         public Guid DestinationAccountId { get; set; }
         public decimal Amount { get; set; }

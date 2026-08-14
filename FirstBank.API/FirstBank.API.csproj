@@ -42,8 +42,4 @@
 		<ProjectReference Include="..\FirstBank.DataAccess\FirstBank.DataAccess.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="wwwroot\" />
-	</ItemGroup>
-
 </Project>

@@ -43,6 +43,12 @@ namespace FirstBank.API.Controllers
         {
             // Why BCrypt? It is intentionally slow. It stops hackers from using supercomputers 
             // to guess millions of passwords a second.
+            // Add this right before hashing the password:
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            {
+                return BadRequest(new { message = "This email is already registered." });
+            }
+
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password, 12);
 
             var user = new AppUser
@@ -51,7 +57,7 @@ namespace FirstBank.API.Controllers
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 PasswordHash = hashedPassword,
-                Role = request.Role  // Default role is "Customer"
+                Role = "Customer"  // Default role is "Customer"
             };
 
             await _context.Users.AddAsync(user);
@@ -120,7 +126,7 @@ namespace FirstBank.API.Controllers
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiryMinutes"])),
+                expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiryMinutes"])),
                 signingCredentials: credentials);
 
             return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });

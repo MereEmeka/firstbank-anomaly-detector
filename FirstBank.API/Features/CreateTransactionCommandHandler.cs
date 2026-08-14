@@ -39,21 +39,7 @@ namespace FirstBank.API.Features
             _logger.LogInformation("Processing transaction with Idempotency Key: {IdempotencyKey} for Amount: {Amount} from Source: {SourceAccountId}",
                 request.IdempotencyKey, request.Amount, request.SourceAccountId);
 
-            // 1. IDEMPOTENCY CHECK: Prevent double-processing
-            bool keyExists = await _context.IdempotencyRecords.AnyAsync(i => i.Key == request.IdempotencyKey, cancellationToken);
-            if (keyExists)
-            {
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = 400,
-                    Message = "Duplicate Request. This transaction has already been processed."
-                };
-            }
-
-          
             // Fetch BOTH accounts and their User Profiles at the same time
-         
             var accounts = await _context.Accounts
                 .Include(a => a.User) // This joins the Users table so we have their names/emails
                 .Where(a => a.Id == request.SourceAccountId || a.Id == request.DestinationAccountId)
@@ -67,6 +53,17 @@ namespace FirstBank.API.Features
                 return new ApiResponse<object> { Success = false, StatusCode = 404, Message = "Source account not found." };
             }
 
+            //Ownership Check
+            if (sourceAccount.UserId != request.UserId)
+            {
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = 401,
+                    Message = "Unauthorized: You do not own the source account"
+                };
+            }
+
             if (destAccount == null)
             {
                 return new ApiResponse<object> { Success = false, StatusCode = 404, Message = "Destination account not found." };
@@ -76,7 +73,7 @@ namespace FirstBank.API.Features
             {
                 return new ApiResponse<object> { Success = false, StatusCode = 400, Message = "Insufficient funds for this transfer." };
             }
-         
+
 
             // 3. THE 100-POINT ANOMALY DETECTION ENGINE
             int riskScore = 0;
@@ -212,9 +209,25 @@ namespace FirstBank.API.Features
                     Data = new { transactionId = savedTransactionId }
                 };
             }
-            catch (InvalidOperationException ex)
+            catch (Microsoft.Data.SqlClient.SqlException ex)
             {
-                return new ApiResponse<object> { Success = false, StatusCode = 400, Message = ex.Message };
+                // Catches custom SQL errors or duplicate idempotency keys from the stored procedure
+                int statusCode = ex.Number == 50000 || ex.Message.Contains("Duplicate request") ? 409 : 400;
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = statusCode,
+                    Message = ex.Message
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = 400,
+                    Message = ex.Message
+                };
             }
         }
     }

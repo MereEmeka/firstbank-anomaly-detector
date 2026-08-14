@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using FirstBank.Core.Models;
 using FirstBank.DataAccess.Repositories;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FirstBank.API.Features
 {
@@ -15,20 +17,29 @@ namespace FirstBank.API.Features
 
         public async Task<ApiResponse<object>> Handle(GetAccountBalanceQuery request, CancellationToken cancellationToken)
         {
-            //This calls the Dapper Method
             var balance = await _repository.GetAccountBalanceAsync(request.AccountId);
 
-            return new ApiResponse<object>
+            if (balance == null)
             {
-                Success = true,
-                StatusCode = 200,
-                Message = "Account Balance Received successfully through Stored Procedure.",
-                Data = new
+                return new ApiResponse<object>
                 {
-                    AccountId = request.AccountId,
-                    CurrentBalance = balance
-                }
-            };
+                    Success = false,
+                    StatusCode = 404,
+                    Message = "Account not found"
+                };
+            }
+               
+            return new ApiResponse<object>
+                {
+                    Success = true,
+                    StatusCode = 200,
+                    Message = "Account Balance Received successfully through Stored Procedure.",
+                    Data = new
+                    {
+                        AccountId = request.AccountId,
+                        CurrentBalance = balance
+                    }
+                };
+            }
         }
     }
-}

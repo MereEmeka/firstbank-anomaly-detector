@@ -9,6 +9,7 @@ using FirstBank.API.Validators;
 using FirstBank.DataAccess.Repositories;
 using FirstBank.DataAccess.Data;
 using Dapper;
+using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting; // Needed to see ITransactionRepository
 
 namespace FirstBank.API.Controllers
@@ -22,7 +23,7 @@ namespace FirstBank.API.Controllers
         private readonly FirstDBContext _context;
 
         // Dependency Injection: The controller asks for the database connection
-        public TransactionsController(ITransactionRepository repository, FirstDBContext context, IMediator mediator)
+        public TransactionsController(FirstDBContext context, IMediator mediator)
         {
             _context = context;
             _mediator = mediator;
@@ -43,9 +44,12 @@ namespace FirstBank.API.Controllers
                     Message = "Missing X-Idempotency-key header."
                 });
 
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+
             // Package the data into the Command Envelope
             var command = new CreateTransactionCommand
             {
+                UserId = Guid.Parse(userIdClaim!),
                 SourceAccountId = request.SourceAccountId,
                 DestinationAccountId = request.DestinationAccountId,
                 Amount = request.Amount,
@@ -127,19 +131,6 @@ namespace FirstBank.API.Controllers
                 Message = "Secure Search executed successfully.",
                 Data = results
             });
-        }
-
-        [HttpGet("balance/{accountId}")]
-        public async Task<IActionResult> GetBalance(Guid accountId)
-        {
-            var query = new GetAccountBalanceQuery
-            {
-                AccountId = accountId
-            };
-
-            var response = await _mediator.Send(query);
-
-            return Ok(response);
         }
     }
 }
