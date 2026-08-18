@@ -21,6 +21,8 @@ The Transaction Anomaly Detector is a robust, containerized financial backend se
 * **Secrets Management:** Configuration injected strictly via Environment Variables (no hardcoded secrets)
 * **Least Privilege:** Database user accounts restricted to required table operations only
 
+## Check the screenshots folder for the visual of the web app
+
 ## 🚀 Getting Started (Local Development)
 To run this API environment locally, ensure you have Docker Desktop installed.
 
